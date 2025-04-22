@@ -47,26 +47,24 @@ export default function WordleGame() {
       return;
     }
 
-    // Prevent multiple submissions while validating
     if (isValidating) return;
 
     setIsValidating(true);
 
     try {
-      // Check if the word is valid (you'll need to implement this function)
       const isValid = await checkWordValidity(currentGuess);
 
       if (!isValid) {
-        toast.error('Not in word list');
+        toast.error('Not in word list', {
+          description: 'Please try a different word'
+        });
         setIsValidating(false);
         return;
       }
 
-      // Word is valid, proceed with the guess
       const newGuesses = [...guesses, currentGuess];
       setGuesses(newGuesses);
 
-      // Update keyboard states
       const newKeyStates = { ...keyStates };
       for (let i = 0; i < currentGuess.length; i++) {
         const letter = currentGuess[i];
@@ -81,16 +79,19 @@ export default function WordleGame() {
       setKeyStates(newKeyStates);
 
       if (currentGuess === targetWord) {
-        toast.success('Congratulations! You won! 🎉');
+        toast.success('Congratulations! You won! 🎉', {
+          description: `You found the word in ${newGuesses.length} ${newGuesses.length === 1 ? 'try' : 'tries'}!`
+        });
         setGameOver(true);
         setGameWon(true);
       } else if (newGuesses.length === MAX_ATTEMPTS) {
-        toast.error(`Game Over! The word was ${targetWord}`);
+        toast.error('Game Over!', {
+          description: `The word was ${targetWord}`
+        });
         setGameOver(true);
         setGameWon(false);
       }
 
-      // Clear current guess AFTER processing it
       setCurrentGuess('');
     } catch (error) {
       toast.error('Error validating word');
@@ -101,36 +102,18 @@ export default function WordleGame() {
   };
 
   const checkWordValidity = async (word: string) => {
-    toast.success('Checking word validity...', {
-      description: 'Please wait a moment'
-    });
     try {
       const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
 
-      console.log(`Checking word validity for: ${word}`, response);
-
       if (!response.ok) {
-        // If the response is not ok (like 404 status), the word doesn't exist
         if (response.status === 404) {
-          // Immediately show toast without trying to parse response
-          toast.error("Not in word list", {
-            description: "Please try a different word"
-          });
-          console.log("Word not found in dictionary:", word);
           return false;
         }
-
-        // For other error statuses, try to parse the response
         try {
           const errorData = await response.json();
           console.log("Error data:", errorData);
-
-          toast.error("Not in word list", {
-            description: "Please try a different word"
-          });
         } catch (parseError) {
           console.error("Error parsing error response:", parseError);
-          toast.error("Invalid word");
         }
         return false;
       }
@@ -138,11 +121,6 @@ export default function WordleGame() {
       return true;
     } catch (error) {
       console.error('Error checking word validity:', error);
-      // In case of network error, show a more specific error
-      toast.error("Error checking word", {
-        description: "Please check your connection and try again"
-      });
-      // In case of network error, you might want to allow the word anyway
       return true;
     }
   };
@@ -160,7 +138,6 @@ export default function WordleGame() {
   const renderGrid = () => {
     const rows = [];
 
-    // Render previous guesses
     for (let i = 0; i < guesses.length; i++) {
       const row = [];
       const isLatestGuess = i === guesses.length - 1;
@@ -198,7 +175,7 @@ export default function WordleGame() {
           initial={{ opacity: isLatestGuess ? 0 : 1, y: isLatestGuess ? 10 : 0 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{
-            delay: isLatestGuess ? 0.6 : 0, // Add delay after letters animate
+            delay: isLatestGuess ? 0.6 : 0,
             duration: isLatestGuess ? 0.2 : 0
           }}
         >
@@ -207,7 +184,6 @@ export default function WordleGame() {
       );
     }
 
-    // Render current guess
     if (!gameOver && guesses.length < MAX_ATTEMPTS) {
       const row = [];
       for (let i = 0; i < WORD_LENGTH; i++) {
@@ -234,7 +210,6 @@ export default function WordleGame() {
       );
     }
 
-    // Fill remaining rows with animation on initial load
     for (let i = guesses.length + 1; i < MAX_ATTEMPTS; i++) {
       const row = [];
       for (let j = 0; j < WORD_LENGTH; j++) {
@@ -244,7 +219,7 @@ export default function WordleGame() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{
-              delay: 0.3 + (i * 0.1) + (j * 0.05), // Stagger based on row and column
+              delay: 0.3 + (i * 0.1) + (j * 0.05),
               duration: 0.2
             }}
             className="w-14 h-14 border-2 border-gray-300 rounded m-1"
@@ -312,7 +287,7 @@ export default function WordleGame() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
-          delay: 0.6, // Start keyboard animation after grid is visible
+          delay: 0.6,
           duration: 0.4
         }}
       >
@@ -324,19 +299,19 @@ export default function WordleGame() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{
-                  delay: 0.7 + (i * 0.1) + (j * 0.03), // Stagger keyboard keys
+                  delay: 0.7 + (i * 0.1) + (j * 0.03),
                   duration: 0.2
                 }}
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => handleKeyClick(key)}
                 className={cn(
-                  'px-3 py-4 rounded font-bold text-sm sm:text-base',
+                  'px-3 py-4 rounded font-bold text-sm sm:text-base transition-all active:scale-95',
                   key.length > 1 ? 'px-4' : 'min-w-[40px]',
                   keyStates[key] === 'correct' && 'bg-green-500 text-white',
                   keyStates[key] === 'present' && 'bg-yellow-500 text-white',
                   keyStates[key] === 'absent' && 'bg-gray-500 text-white',
-                  !keyStates[key] && 'bg-gray-200 dark:bg-gray-700'
+                  !keyStates[key] && 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
                 )}
               >
                 {key}
@@ -350,6 +325,8 @@ export default function WordleGame() {
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => {
             setTargetWord(getRandomWord());
             setGuesses([]);
@@ -358,7 +335,7 @@ export default function WordleGame() {
             setGameWon(false);
             setKeyStates({});
           }}
-          className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:opacity-90 transition-opacity"
+          className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:opacity-90 transition-all"
         >
           Play Again
         </motion.button>
